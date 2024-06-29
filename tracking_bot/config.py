@@ -1,5 +1,3 @@
-import datetime
-import pandas as pd
 import pymysql
 
 connection = pymysql.connect(
@@ -10,3 +8,5 @@ connection = pymysql.connect(
         database='darkelza_galiullin_db',
         cursorclass=pymysql.cursors.DictCursor
     )
+
+token = '6596981303:AAEqYw5ga-iEWZZlkKpo7lS58RpSLKF_9WU'
