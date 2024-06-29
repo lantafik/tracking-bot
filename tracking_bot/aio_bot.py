@@ -12,7 +12,7 @@ dp = Dispatcher(bot)
 
 class Form(StatesGroup):
     name = State()
-
+asd = 123
 @dp.message_handler(commands='start')
 async def start(message: types.Message, state: FSMContext):
     await message.answer('Здравствуйте!\nВы попали в сервис отслеживания личного расписания!\nКак я могу к вам обращаться?')
