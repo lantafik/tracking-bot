@@ -1,31 +1,27 @@
-from aiogram import Bot, Dispatcher, executor
-from aiogram import types
-from aiogram.dispatcher import FSMContext
-from aiogram.dispatcher.filters.state import State, StatesGroup
+import aiogram
 
-import config
-import keyboards
+from aiogram import Bot, Dispatcher, executor, types
 
-bot = Bot(token=config.token)
+TOKEN_API = '7250507637:AAHhLqUtN0EZWz9Nd0ojpywHrfZ5FrRWW6A'
+
+HELP_COMMAND = """
+/help - список команд
+/start - начать работу с ботом
+"""
+
+bot = Bot(TOKEN_API)
 dp = Dispatcher(bot)
 
-class Form(StatesGroup):
-    name = State()
+
+@dp.message_handler(commands=['start'])
+async def echo(message: types.Message):
+    await message.answer(text="Добро пожаловать в мой телеграмм бот!")
+    await message.delete()
+@dp.message_handler(commands=['help'])
+async def help_command(message: types.Message):
+    await message.answer(text=HELP_COMMAND)
 
 
-@dp.message_handler(commands='start')
-async def start(message: types.Message, state: FSMContext):
-    await message.answer('Здравствуйте!\nВы попали в сервис отслеживания личного расписания!\nКак я могу к вам обращаться?')
-    date = message.date
-    await Form.name.set()
+if __name__ == "__main__":
+    executor.start_polling(dp)
 
-@dp.message_handler(state=Form.name)
-async def set_name(message:types.Message, state: FSMContext):
-    name = message.text
-    await message.answer('Приятно познакомиться!...')
-
-
-
-
-if __name__ == '__main__':
-    executor.start_polling(dp, skip_updates=True)

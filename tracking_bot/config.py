@@ -9,4 +9,4 @@ connection = pymysql.connect(
         cursorclass=pymysql.cursors.DictCursor
     )
 
-token = '6596981303:AAEqYw5ga-iEWZZlkKpo7lS58RpSLKF_9WU'
+token = '7250507637:AAHhLqUtN0EZWz9Nd0ojpywHrfZ5FrRWW6A'
