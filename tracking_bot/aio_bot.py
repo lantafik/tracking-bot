@@ -4,6 +4,7 @@ from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 
+from keyboards import *
 import config
 import keyboards
 storage = MemoryStorage()
@@ -31,13 +32,19 @@ async def start(message: types.Message, state: FSMContext):
 @dp.message_handler(state=Form.name)
 async def set_name(message: types.Message, state: FSMContext):
     name = message.text
-    await message.answer(f'Приятно познакомиться, {name}!')
+    keyboard = types.ReplyKeyboardMarkup(keyboard=kb_menu, resize_keyboard=True)
+    await message.answer(f'Приятно познакомиться, {name}!', reply_markup=keyboard)
     await state.finish()
 
 @dp.message_handler(commands=['help'])
 async def help_command(message: types.Message):
     await message.answer(text=HELP_COMMAND)
 
+@dp.message_handler(commands=['Начало и конец дня'])
+async def time_changed(message: types.Message):
+    keyboard = types.ReplyKeyboardMarkup(keyboard=kb_menu_start_and_end_day_2, resize_keyboard=True)
+    await message.answer('Выберите действие:',reply_markup=keyboard)
+
+
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)
-

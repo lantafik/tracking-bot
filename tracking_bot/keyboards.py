@@ -1,6 +1,5 @@
 from aiogram import types
 
-
 kb_menu = [
     [
         types.KeyboardButton(text='Начало и конец дня', resize_keyboard=True),
