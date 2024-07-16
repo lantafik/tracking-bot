@@ -1,13 +1,14 @@
 import pymysql
 import config
 import datetime
+from datetime import time
 connect = config.connection
 
 
 def add_new_user(id, name, date_reg, day_start, day_end):
     global connect
     with connect.cursor() as cursor:
-        sql_request = "INSERT INTO `users` (`tg_id`, `name`, `day_start`, `day_end`, `date_reg`) \
+        sql_request = "INSERT INTO `users` (`tg_id`, `name`, `date_reg`, `day_start`,`day_end`) \
                                 VALUES (%s, %s, %s, %s, %s);"
         cursor.execute(sql_request, (id, name, date_reg, day_start, day_end))
         connect.commit()
@@ -20,10 +21,12 @@ def select_start_and_end_day(tg_id):
     global connect
     with connect.cursor() as cursor:
         sql_request = "select `day_start`, `day_end` from `users` where `tg_id` = %s"
-        cursor.execute(sql_request, tg_id)
+        cursor.execute(sql_request, (tg_id))
         result = cursor.fetchone()
         return [result['day_start'], result['day_end']]
 # [datetime.timedelta(seconds=1222), datetime.timedelta(seconds=28800)]
+
+
 
 
 def change_start_or_end_day(tg_id, start_or_end, time):
