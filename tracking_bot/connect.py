@@ -75,4 +75,11 @@ def delete_all_codes(tg_id):
         connect.commit()
 
 
+async def fetch_and_send_data(chat_id):
+    global connect
+    with connect.cursor() as cursor:
+        sql_request = "SELECT value_code FROM `codes` WHERE `user_id` = (select `id` from `users` where `tg_id` = %s)"
+        cursor.execute(sql_request, chat_id)
+        connect.commit()
+
 

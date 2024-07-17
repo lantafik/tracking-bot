@@ -27,6 +27,12 @@ kb_menu_change_codes = [
     ]
 ]
 
+kb_menu_reg_codes = [
+    [
+        types.KeyboardButton(text='/Add_a_code', resize_keyboard=True),
+    ]
+]
+
 kb_menu_codes = [
     [
         types.KeyboardButton(text='Меню изменения кодов', resize_keyboard=True),
