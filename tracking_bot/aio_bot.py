@@ -37,6 +37,8 @@ class Code(StatesGroup):
     code_value = State()
     code = State()
 
+class DeleteCode(StatesGroup):
+    code = State()
 @dp.message_handler(commands='start')
 async def start(message: types.Message, state: FSMContext):
     await message.answer(
@@ -198,8 +200,27 @@ async def await_datafr(message: types.Message):
 
 @dp.message_handler(commands='list_c')
 async def list(message: types.Message):
-    fetch_and_send_data(message.chat.id)
+    chat_id = message.chat.id
+    codes_str = await fetch_and_send_data(chat_id)
+    await bot.send_message(chat_id=chat_id, text=codes_str)
 
+@dp.message_handler(commands=['delete_code'])
+async def reg(message: types.Message, state: FSMContext):
+    await DeleteCode.code.set()
+    await message.answer("введите номер кода")
+
+@dp.message_handler(state=DeleteCode.code)
+async def set_name(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['code'] = message.text
+        code = data.get('code')
+        chat_id = message.chat.id
+        was_deleted = delete_code(chat_id, code)  # Пытаемся удалить код и получаем результат
+        if was_deleted:
+            await message.answer("Код успешно удалён.")
+        else:
+            await message.answer("Код не найден или произошла ошибка при удалении.")
+        await state.finish()  # Возвращаемся к начальному состоянию
 
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)

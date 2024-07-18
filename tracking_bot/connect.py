@@ -64,6 +64,7 @@ def delete_code(tg_id, code):
         sql_request = "DELETE FROM `codes` WHERE `user_id` = (select `id` from `users` where `tg_id` = %s) and `code` = %s"
         cursor.execute(sql_request, (tg_id, code))
         connect.commit()
+        return cursor.rowcount > 0
 #delete_code(123123, 12)
 
 
@@ -78,8 +79,13 @@ def delete_all_codes(tg_id):
 async def fetch_and_send_data(chat_id):
     global connect
     with connect.cursor() as cursor:
-        sql_request = "SELECT value_code FROM `codes` WHERE `user_id` = (select `id` from `users` where `tg_id` = %s)"
-        cursor.execute(sql_request, chat_id)
-        connect.commit()
+        sql_request = ("SELECT codes.code, codes.value_code FROM codes "
+                       "JOIN users ON codes.user_id = users.id "
+                       "WHERE users.tg_id = %s")
+        cursor.execute(sql_request, (chat_id,))
+        result = cursor.fetchall()
+        codes_str = "\n".join([f"{row['code']}: {row['value_code']}" for row in result])
+        return codes_str
+
 
 
