@@ -12,7 +12,6 @@ from datetime import datetime
 from keyboards import *
 import config
 from connect import *
-import keyboards
 
 
 
@@ -170,28 +169,53 @@ async def process_document(message: types.Message):
 
 
 @dp.message_handler(commands=['edit'])
-async def edit_excel(message: types.Message):
+async def edit_command(message: types.Message):
+    await message.reply("Введите число ")
+
+# Обработчик текстовых сообщений после команды /edit
+@dp.message_handler(content_types=types.ContentType.TEXT)
+async def edit_message(message: types.Message, state: FSMContext):
     # Путь к вашему Excel файлу
     file_path = 'C:/Users/User/Desktop/бот/output.xlsx'
 
-    try:
-        # Загрузка рабочей книги
-        wb = load_workbook(file_path)
+    wb = openpyxl.load_workbook(file_path)
+    sheet = wb.active
 
-        # Выбор активного листа (можно заменить на имя нужного листа)
-        sheet = wb.active
+    current_date = datetime.datetime.now()
+    day_of_week = current_date.weekday()  # 0 - понедельник, 6 - воскресенье
 
-        # Пример редактирования ячейки A1
-        sheet['D4'] = '6'
+    # Определяем номер колонки на основе дня недели
+    # Например, используем колонки от A до G для дней недели
+    columns = 'DFHJLNP'
+    target_column = columns[day_of_week]
 
-        # Сохранение изменений
-        wb.save(file_path)
+    # Предполагаем, что начальное и конечное время находятся в столбце A и B соответственно
+    start_col = 'A'
+    end_col = 'B'
+    row_to_check = 4  # Начальная строка для проверки
+    end_to_check = 72
 
-        await message.reply("Excel файл успешно отредактирован!")
-    except Exception as e:
-        await message.reply(f"Произошла ошибка: {e}")
+    # Конвертация значений из ячеек в объекты datetime.time
+    start_time = datetime.datetime.strptime(sheet[f'{start_col}{row_to_check}'].value, '%H:%M:%S').time()
+    end_time = datetime.datetime.strptime(sheet[f'{end_col}{row_to_check}'].value, '%H:%M:%S').time()
 
+    sent_at = message.date
+    sent_at_time = sent_at.time()
+    number = message.text
 
+    # Перебор строк для поиска подходящего промежутка
+    for row in range(row_to_check, end_to_check + 1):
+        if start_time <= sent_at_time <= end_time:
+            # Если время отправки попадает в промежуток, записываем число в ячейку D
+            sheet[f'{target_column}{row}'] = number
+            wb.save(file_path)
+            await message.answer("команда принята")
+            break  # Прерываем цикл после первого совпадения
+
+        else:
+            row_to_check = row_to_check + 1
+            start_time = datetime.datetime.strptime(sheet[f'{start_col}{row_to_check}'].value, '%H:%M:%S').time()
+            end_time = datetime.datetime.strptime(sheet[f'{end_col}{row_to_check}'].value, '%H:%M:%S').time()
 @dp.message_handler(commands='file')
 async def await_datafr(message: types.Message):
     file_path = 'C:/Users/User/Desktop/бот/output.xlsx'

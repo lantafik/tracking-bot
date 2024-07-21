@@ -2,8 +2,7 @@ from aiogram import types
 
 kb_ak = [
     [
-        types.KeyboardButton(text='/register', resize_keyboard=True),
-        types.KeyboardButton(text='/log_in', resize_keyboard=True),
+        types.KeyboardButton(text='/register', resize_keyboard=True)
     ]
 ]
 
