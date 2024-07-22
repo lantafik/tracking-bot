@@ -1,4 +1,5 @@
 from aiogram import Bot, Dispatcher, executor
+import asyncio
 from aiogram import types
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
@@ -10,9 +11,9 @@ import os
 import openpyxl
 from datetime import datetime
 from keyboards import *
-import config
 from connect import *
-
+import schedule
+import time
 
 
 storage = MemoryStorage()
@@ -38,6 +39,8 @@ class Code(StatesGroup):
 
 class DeleteCode(StatesGroup):
     code = State()
+
+
 @dp.message_handler(commands='start')
 async def start(message: types.Message, state: FSMContext):
     await message.answer(
@@ -92,6 +95,9 @@ async def set_day_end(message: types.Message, state: FSMContext):
         keyboard = types.ReplyKeyboardMarkup(keyboard=kb_menu_reg_codes, resize_keyboard=True)
         await message.answer(f'Add code, please!', reply_markup=keyboard)
         await state.finish()
+
+
+
 @dp.message_handler(commands=['day_settings'])
 async def time_changed(message: types.Message):
     keyboard = types.ReplyKeyboardMarkup(keyboard=kb_menu_start_and_end_day_2, resize_keyboard=True)
@@ -159,24 +165,54 @@ async def process_document(message: types.Message):
 
     # Преобразуем данные из Excel в DataFrame для удобства работы
     df = pd.DataFrame(ws.values)
-
+    id_user = message.chat.id
     # Сохраняем измененный DataFrame обратно в Excel
-    output_filename = "output.xlsx"
+    output_filename = f"output({id_user}).xlsx"
     df.to_excel(os.path.join(FILE_FOLDER, output_filename), index=False)
 
     # Закрываем книгу
     wb.close()
+    await message.answer("файл принят, пропишите команду /edit для начала записи")
+@dp.message_handler(commands='list_c')
+async def list(message: types.Message):
+    chat_id = message.chat.id
+    codes_str = await fetch_and_send_data(chat_id)
+    await bot.send_message(chat_id=chat_id, text=codes_str)
 
+@dp.message_handler(commands=['delete_code'])
+async def reg(message: types.Message, state: FSMContext):
+    await DeleteCode.code.set()
+    await message.answer("введите номер кода")
+
+@dp.message_handler(state=DeleteCode.code)
+async def set_name(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['code'] = message.text
+        code = data.get('code')
+        chat_id = message.chat.id
+        was_deleted = delete_code(chat_id, code)  # Пытаемся удалить код и получаем результат
+        if was_deleted:
+            await message.answer("Код успешно удалён.")
+        else:
+            await message.answer("Код не найден или произошла ошибка при удалении.")
+        await state.finish()  # Возвращаемся к начальному состоянию
+@dp.message_handler(commands='file')
+async def await_datafr(message: types.Message):
+    id_user = message.chat.id
+    file_path = f'C:/Users/User/Desktop/бот/output({id_user}).xlsx'
+    with open(file_path, 'rb') as file:
+        await message.reply_document(file)
 
 @dp.message_handler(commands=['edit'])
 async def edit_command(message: types.Message):
-    await message.reply("Введите число ")
+    await message.reply("Введите идентификатор кода")
 
 # Обработчик текстовых сообщений после команды /edit
 @dp.message_handler(content_types=types.ContentType.TEXT)
 async def edit_message(message: types.Message, state: FSMContext):
     # Путь к вашему Excel файлу
-    file_path = 'C:/Users/User/Desktop/бот/output.xlsx'
+    id_user = message.chat.id
+    file_path = f'C:/Users/User/Desktop/бот/output({id_user}).xlsx'
 
     wb = openpyxl.load_workbook(file_path)
     sheet = wb.active
@@ -216,36 +252,33 @@ async def edit_message(message: types.Message, state: FSMContext):
             row_to_check = row_to_check + 1
             start_time = datetime.datetime.strptime(sheet[f'{start_col}{row_to_check}'].value, '%H:%M:%S').time()
             end_time = datetime.datetime.strptime(sheet[f'{end_col}{row_to_check}'].value, '%H:%M:%S').time()
-@dp.message_handler(commands='file')
-async def await_datafr(message: types.Message):
-    file_path = 'C:/Users/User/Desktop/бот/output.xlsx'
-    with open(file_path, 'rb') as file:
-        await message.reply_document(file)
 
-@dp.message_handler(commands='list_c')
-async def list(message: types.Message):
-    chat_id = message.chat.id
-    codes_str = await fetch_and_send_data(chat_id)
-    await bot.send_message(chat_id=chat_id, text=codes_str)
+#def rename_file_on_sunday():
+    #current_day = time.strftime("%A")
+    #if current_day == "Sunday":
+        #current_time = time.strftime("%Y.%m.%d")
+        #source_path = 'C:/Users/User/Desktop/бот/output.xlsx'
 
-@dp.message_handler(commands=['delete_code'])
-async def reg(message: types.Message, state: FSMContext):
-    await DeleteCode.code.set()
-    await message.answer("введите номер кода")
+        #try:
+     #       new_name = f"{current_time}_output.xlsx"
+    #        os.rename(source_path, source_path.rsplit('/', 1)[0] + '/' + new_name)
+   #         print(f"Имя файла успешно изменено на {new_name}")
+  #      except Exception as e:
+ #           print(f"Произошла ошибка при переименовании файла: {e}")
 
-@dp.message_handler(state=DeleteCode.code)
-async def set_name(message: types.Message, state: FSMContext):
-    async with state.proxy() as data:
-        data['code'] = message.text
-        code = data.get('code')
-        chat_id = message.chat.id
-        was_deleted = delete_code(chat_id, code)  # Пытаемся удалить код и получаем результат
-        if was_deleted:
-            await message.answer("Код успешно удалён.")
-        else:
-            await message.answer("Код не найден или произошла ошибка при удалении.")
-        await state.finish()  # Возвращаемся к начальному состоянию
+#schedule.every().day.at("23:52").do(rename_file_on_sunday)
+
+#async def rename_file_on_sunday_async():
+    #while True:
+        #try:
+            #await asyncio.sleep(60 * 60 * 24)  # Пауза 24 часа
+            #rename_file_on_sunday()
+        #except Exception as e:
+            #print(f"Произошла ошибка при переименовании файла: {e}")
+
 
 if __name__ == '__main__':
+    #loop = asyncio.get_event_loop()
+    #loop.create_task(rename_file_on_sunday_async())  # Запускаем асинхронную задачу
     executor.start_polling(dp, skip_updates=True)
 
