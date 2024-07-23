@@ -8,12 +8,9 @@ kb_ak = [
 
 kb_menu = [
     [
-        types.KeyboardButton(text='/day_settings', resize_keyboard=True),
         types.KeyboardButton(text='/List_of_codes', resize_keyboard=True),
-        types.KeyboardButton(text='/Changing_codes', resize_keyboard=True),
-        types.KeyboardButton(text='/Schedule_history', resize_keyboard=True),
-        #types.KeyboardButton(text='Прекращение работы', resize_keyboard=True),
-        types.KeyboardButton(text='/Start_of_the_schedule', resize_keyboard=True)
+        types.KeyboardButton(text='/Add_a_code', resize_keyboard=True),
+        types.KeyboardButton(text='/delete_code', resize_keyboard=True),
     ]
 ]
 

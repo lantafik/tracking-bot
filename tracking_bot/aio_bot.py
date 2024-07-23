@@ -1,20 +1,13 @@
 from aiogram import Bot, Dispatcher, executor
-import asyncio
-from aiogram import types
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
-from openpyxl import load_workbook
-import numpy as np
 import pandas as pd
 import os
 import openpyxl
 from datetime import datetime
 from keyboards import *
 from connect import *
-import schedule
-import time
-
 
 storage = MemoryStorage()
 
@@ -27,11 +20,11 @@ class Form(StatesGroup):
 
 
 class DataCollectionForm(StatesGroup):
-    id = State()  # Ожидание ID
-    name = State()  # Ожидание имени
-    date_reg = State()  # Ожидание даты регистрации
-    day_start = State()  # Ожидание начала дня
-    day_end = State()  # Ожидание конца дня
+    id = State()
+    name = State()
+    date_reg = State()
+    day_start = State()
+    day_end = State()
 
 class Code(StatesGroup):
     code_value = State()
@@ -58,7 +51,7 @@ async def set_name(message: types.Message, state: FSMContext):
 
 
 @dp.message_handler(commands=['register'])
-async def reg(message: types.Message, state: FSMContext):
+async def register(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['date_reg'] = message.date
     await DataCollectionForm.name.set()
@@ -66,7 +59,7 @@ async def reg(message: types.Message, state: FSMContext):
 
 
 @dp.message_handler(state=DataCollectionForm.name)
-async def set_name(message: types.Message, state: FSMContext):
+async def set_name_for_reg(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['id'] = message.chat.id
         data['name'] = message.text
@@ -97,53 +90,30 @@ async def set_day_end(message: types.Message, state: FSMContext):
         await state.finish()
 
 
-
-@dp.message_handler(commands=['day_settings'])
-async def time_changed(message: types.Message):
-    keyboard = types.ReplyKeyboardMarkup(keyboard=kb_menu_start_and_end_day_2, resize_keyboard=True)
-    await message.answer('Выберите действие:', reply_markup=keyboard)
-
-
-@dp.message_handler(commands=['Change_the_start_of_the_day'])
-async def time_changed(message: types.Message):
-    await message.answer(message.chat.id)
-
-
-@dp.message_handler(commands=['List_of_codes'])
-async def time_changed(message: types.Message):
-    keyboard = types.ReplyKeyboardMarkup(keyboard=kb_menu_change_codes, resize_keyboard=True)
-    await message.answer('Выберите действие:', reply_markup=keyboard)
 @dp.message_handler(commands=['Add_a_code'])
-async def reg(message: types.Message, state: FSMContext):
+async def Add_a_code(message: types.Message, state: FSMContext):
     await Code.code_value.set()
     await message.answer("описание кода(обед)")
 
 @dp.message_handler(state=Code.code_value)
-async def set_name(message: types.Message, state: FSMContext):
+async def set_code_value(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['code_value'] = message.text
         await Code.code.set()
         await message.answer("введите номер кода(например 12)")
 
 @dp.message_handler(state=Code.code)
-async def set_day_end(message: types.Message, state: FSMContext):
+async def loading_code(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['code'] = message.text
         id = message.chat.id
         code_value = data.get('code_value')
         code = data.get('code')
         add_new_code(id, code, code_value)
-        await message.answer(f"код успешно добавлен!")
+        await message.answer(f"код успешно добавлен! загрузите файл или выберите другую команду")
         await state.finish()
-
-@dp.message_handler(commands=['Schedule_history'])
-async def time_changed(message: types.Message):
-    await message.answer(f'история')
-
-
-@dp.message_handler(commands=['Start_of_the_schedule'])
-async def time_changed(message: types.Message):
-    await message.answer(f'расписание')
+        keyboard = types.ReplyKeyboardMarkup(keyboard=kb_menu, resize_keyboard=True)
+        await message.answer('Выберите действие:', reply_markup=keyboard)
 
 
 @dp.message_handler(content_types=types.ContentType.DOCUMENT)
@@ -173,31 +143,35 @@ async def process_document(message: types.Message):
     # Закрываем книгу
     wb.close()
     await message.answer("файл принят, пропишите команду /edit для начала записи")
-@dp.message_handler(commands='list_c')
+@dp.message_handler(commands='List_of_codes')
 async def list(message: types.Message):
     chat_id = message.chat.id
     codes_str = await fetch_and_send_data(chat_id)
     await bot.send_message(chat_id=chat_id, text=codes_str)
 
 @dp.message_handler(commands=['delete_code'])
-async def reg(message: types.Message, state: FSMContext):
+async def delete_code(message: types.Message, state: FSMContext):
     await DeleteCode.code.set()
-    await message.answer("введите номер кода")
+    await message.answer("введите идентификатор кода(5)")
 
 @dp.message_handler(state=DeleteCode.code)
-async def set_name(message: types.Message, state: FSMContext):
+async def delete_database_code(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['code'] = message.text
         code = data.get('code')
         chat_id = message.chat.id
-        was_deleted = delete_code(chat_id, code)  # Пытаемся удалить код и получаем результат
+        was_deleted = delete_code_sql(chat_id, code)  # Пытаемся удалить код и получаем результат
         if was_deleted:
             await message.answer("Код успешно удалён.")
+            keyboard = types.ReplyKeyboardMarkup(keyboard=kb_menu, resize_keyboard=True)
+            await message.answer('Выберите действие:', reply_markup=keyboard)
         else:
-            await message.answer("Код не найден или произошла ошибка при удалении.")
+            await message.answer("Код не найден или произошла ошибка при удалении выберите другую команду")
         await state.finish()  # Возвращаемся к начальному состоянию
+        keyboard = types.ReplyKeyboardMarkup(keyboard=kb_menu, resize_keyboard=True)
+        await message.answer('Выберите действие:', reply_markup=keyboard)
 @dp.message_handler(commands='file')
-async def await_datafr(message: types.Message):
+async def file_output(message: types.Message):
     id_user = message.chat.id
     file_path = f'C:/Users/User/Desktop/бот/output({id_user}).xlsx'
     with open(file_path, 'rb') as file:
@@ -210,6 +184,9 @@ async def edit_command(message: types.Message):
 # Обработчик текстовых сообщений после команды /edit
 @dp.message_handler(content_types=types.ContentType.TEXT)
 async def edit_message(message: types.Message, state: FSMContext):
+    if not await limitations(message.chat.id, message.text):
+        await message.reply("Такого идентификатора не найдено. Пожалуйста, повторите ввод.")
+        return
     # Путь к вашему Excel файлу
     id_user = message.chat.id
     file_path = f'C:/Users/User/Desktop/бот/output({id_user}).xlsx'
@@ -217,7 +194,7 @@ async def edit_message(message: types.Message, state: FSMContext):
     wb = openpyxl.load_workbook(file_path)
     sheet = wb.active
 
-    current_date = datetime.datetime.now()
+    current_date = datetime.    datetime.now()
     day_of_week = current_date.weekday()  # 0 - понедельник, 6 - воскресенье
 
     # Определяем номер колонки на основе дня недели
@@ -245,7 +222,7 @@ async def edit_message(message: types.Message, state: FSMContext):
             # Если время отправки попадает в промежуток, записываем число в ячейку D
             sheet[f'{target_column}{row}'] = number
             wb.save(file_path)
-            await message.answer("команда принята")
+            await message.answer("команда принята, введите /file чтобы получить расписание")
             break  # Прерываем цикл после первого совпадения
 
         else:
@@ -253,32 +230,7 @@ async def edit_message(message: types.Message, state: FSMContext):
             start_time = datetime.datetime.strptime(sheet[f'{start_col}{row_to_check}'].value, '%H:%M:%S').time()
             end_time = datetime.datetime.strptime(sheet[f'{end_col}{row_to_check}'].value, '%H:%M:%S').time()
 
-#def rename_file_on_sunday():
-    #current_day = time.strftime("%A")
-    #if current_day == "Sunday":
-        #current_time = time.strftime("%Y.%m.%d")
-        #source_path = 'C:/Users/User/Desktop/бот/output.xlsx'
-
-        #try:
-     #       new_name = f"{current_time}_output.xlsx"
-    #        os.rename(source_path, source_path.rsplit('/', 1)[0] + '/' + new_name)
-   #         print(f"Имя файла успешно изменено на {new_name}")
-  #      except Exception as e:
- #           print(f"Произошла ошибка при переименовании файла: {e}")
-
-#schedule.every().day.at("23:52").do(rename_file_on_sunday)
-
-#async def rename_file_on_sunday_async():
-    #while True:
-        #try:
-            #await asyncio.sleep(60 * 60 * 24)  # Пауза 24 часа
-            #rename_file_on_sunday()
-        #except Exception as e:
-            #print(f"Произошла ошибка при переименовании файла: {e}")
-
 
 if __name__ == '__main__':
-    #loop = asyncio.get_event_loop()
-    #loop.create_task(rename_file_on_sunday_async())  # Запускаем асинхронную задачу
     executor.start_polling(dp, skip_updates=True)
 

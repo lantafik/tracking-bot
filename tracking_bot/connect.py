@@ -58,7 +58,7 @@ def add_new_code(tg_id, code, value_code):
 #add_new_code(123123, 12, "завтрак")
 
 
-def delete_code(tg_id, code):
+def delete_code_sql(tg_id, code):
     global connect
     with connect.cursor() as cursor:
         sql_request = "DELETE FROM `codes` WHERE `user_id` = (select `id` from `users` where `tg_id` = %s) and `code` = %s"
@@ -87,5 +87,14 @@ async def fetch_and_send_data(chat_id):
         codes_str = "\n".join([f"{row['code']}: {row['value_code']}" for row in result])
         return codes_str
 
+async def limitations(chat_id, numer_code):
+    global connect
+    with connect.cursor() as cursor:
+        sql_request = ("SELECT codes.code FROM codes "
+                       "JOIN users ON codes.user_id = users.id "
+                       "WHERE users.tg_id = %s AND codes.code = %s")
+        cursor.execute(sql_request, (chat_id, numer_code))
+        result = cursor.fetchone()
 
-
+        # Если результат не None, значит совпадение найдено
+        return bool(result)
